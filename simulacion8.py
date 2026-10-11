@@ -5,10 +5,8 @@ import matplotlib.patches as patches
 import matplotlib.transforms as mtransforms
 from matplotlib.animation import FuncAnimation
 
-# Importamos el motor físico y las constantes desde el nuevo archivo fisica.py
 from fisica import simular_tiempo_real, F_MECANICA_MAX
 
-# --- CONSTANTES DE INTERFAZ GRÁFICA ---
 PRESETS_FRICCION = {
     'Asfalto Seco (~0.8)': 0.8,
     'Concreto Seco (~0.7)': 0.7,
@@ -29,7 +27,7 @@ COLORES_ESTADO = {
     "No se detuvo": ('purple', 'indigo')
 }
 
-# --- CONFIGURACIÓN DE LA INTERFAZ GRÁFICA ---
+
 fig, ax = plt.subplots(figsize=(12, 7))
 plt.subplots_adjust(left=0.05, bottom=0.45, right=0.75, top=0.9)
 ax.set_title("Frenado Tradicional vs IA: Incertidumbre y Regresión Cuantil", fontsize=14, fontweight='bold')
@@ -55,12 +53,12 @@ boton_play = Button(ax_boton, '▶ SIMULAR', color='lightblue', hovercolor='0.97
 
 txt_resultado = plt.figtext(0.77, 0.10, "Ajuste parámetros y presione SIMULAR...", fontsize=10, weight='bold', wrap=True)
 
-# HUD Display en el gráfico anclado a la esquina superior derecha
+
 hud_text = ax.text(0.95, 0.95, "", transform=ax.transAxes, fontsize=12, 
                    verticalalignment='top', horizontalalignment='right', 
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-# --- CREACIÓN DEL CAMIÓN Y ESCENA ---
+
 partes_camion = []
 trailer = patches.Rectangle((-10.0, 0.8), 6.5, 3.2, edgecolor='black', zorder=3)
 cabina = patches.Polygon([(-3.2, 0.8), (-0.2, 0.8), (-0.2, 1.7), (-0.8, 3.0), (-3.2, 3.0)], edgecolor='black', zorder=3)
@@ -73,16 +71,16 @@ for parte in partes_camion: ax.add_patch(parte)
 linea_via, = ax.plot([], [], color='dimgray', linewidth=5, zorder=1)
 poste_fin, = ax.plot([], [], color='red', linewidth=3, linestyle='--', zorder=2)
 
-# --- ACTUALIZACIÓN ESTÁTICA EN TIEMPO REAL ---
+
 def actualizar_escena_estatica(val=None):
     theta_rad = np.radians(slider_theta.val)
     L_via = slider_L.val
     
-    # Dibujar vía y poste
+    
     linea_via.set_data([-20 * np.cos(theta_rad), L_via * np.cos(theta_rad)], [20 * np.sin(theta_rad), -L_via * np.sin(theta_rad)])
     poste_fin.set_data([L_via * np.cos(theta_rad), L_via * np.cos(theta_rad)], [-L_via * np.sin(theta_rad), -L_via * np.sin(theta_rad) + 10])
     
-    # Reiniciar camión a inicio
+    
     transform = mtransforms.Affine2D().rotate(-theta_rad) + ax.transData
     cabina.set_facecolor(COLORES_ESTADO["Inicio"][0]); trailer.set_facecolor(COLORES_ESTADO["Inicio"][1])
     for p in partes_camion: p.set_transform(transform)
@@ -94,7 +92,7 @@ def actualizar_escena_estatica(val=None):
 
 for s in [slider_L, slider_v0, slider_theta, slider_m]: s.on_changed(actualizar_escena_estatica)
 
-# --- MOTOR DE ANIMACIÓN ---
+
 anim_obj = None
 
 def animar(event):
@@ -104,7 +102,7 @@ def animar(event):
     escenario = radio_modo.value_selected
     mu_real = PRESETS_FRICCION[radio_fric.value_selected]
     
-    # Llama a la función que ahora vive en fisica.py
+   
     hist, choca, hubo_bloqueo, res_final = simular_tiempo_real(
         escenario, slider_v0.val, slider_theta.val, mu_real, slider_m.val, slider_L.val
     )
@@ -134,7 +132,7 @@ def animar(event):
     salto = max(1, frames_totales // 90)
     indices_anim = list(range(0, frames_totales, salto))
     if indices_anim[-1] != frames_totales - 1: indices_anim.append(frames_totales - 1)
-    indices_anim.extend([frames_totales - 1] * 15) # Pausa final
+    indices_anim.extend([frames_totales - 1] * 15) 
     
     theta_rad = np.radians(slider_theta.val)
     
@@ -145,14 +143,13 @@ def animar(event):
         t_val = hist['t'][frame]
         estado = hist['estado'][frame]
         
-        # HUD Update
+        
         hud_text.set_text(f"Tiempo: {t_val:.1f} s\nVelocidad: {v_val:.1f} km/h\nDistancia: {x_val:.1f} m\nEstado: {estado}")
         
-        # Colores
+        
         c_cab, c_trail = COLORES_ESTADO.get(estado, ('royalblue', 'slategray'))
         cabina.set_facecolor(c_cab); trailer.set_facecolor(c_trail)
 
-        # Geometría
         x_coord, y_coord = x_val * np.cos(theta_rad), -x_val * np.sin(theta_rad)
         transformacion = mtransforms.Affine2D().rotate(-theta_rad).translate(x_coord, y_coord) + ax.transData
         for parte in partes_camion: parte.set_transform(transformacion)
